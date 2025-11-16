@@ -1,8 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gocarina/gocsv"
 	"golang.org/x/text/language"
@@ -31,18 +36,28 @@ var (
 func main() {
 	fmt.Println("Echo ledger partner is here to help!")
 
-	fmt.Println("Reading csv...")
+	csvPath := flag.String("path", "", "path to csv file")
 
-	records := ReadCsv()
+	if *csvPath == "" {
+		fmt.Println("Path to csv file was not provided, getting csv files in current directory...")
+		files := findCSVFiles(".")
+		fmt.Println("Using first csv file as default...")
+		csvPath = &files[0]
 
-	fmt.Println("------------------------------------")
+	}
+
+	fmt.Printf("Reading csv file (%s)...\n", *csvPath)
+
+	records := ReadCsv(*csvPath)
+
+	fmt.Println("---------------------------------------------------------")
 	// filter and print important data
 	filter(records)
-	fmt.Println("------------------------------------")
+	fmt.Println("---------------------------------------------------------")
 }
 
-func ReadCsv() []*Record {
-	csvFile, csvFileError := os.OpenFile("axio_expense_report_01-01-2020_to_30-11-2025.csv", os.O_RDWR, os.ModePerm)
+func ReadCsv(csvPath string) []*Record {
+	csvFile, csvFileError := os.OpenFile(csvPath, os.O_RDWR, os.ModePerm)
 	if csvFileError != nil {
 		panic(csvFileError)
 	}
@@ -76,4 +91,22 @@ func filter(records []*Record) {
 	for k := range CategoryWiseFilterMap {
 		p.Printf("%s:  %.2f\n", k, PresentationMap[k])
 	}
+}
+
+func findCSVFiles(dir string) []string {
+	var fileNames []string
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		log.Fatalf("Error reading directory: %v", err)
+	}
+
+	fmt.Printf("CSV files found in %s:\n", dir)
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".csv") {
+			fmt.Println("\t", len(fileNames)+1, ".", filepath.Join(dir, file.Name()))
+			fileNames = append(fileNames, file.Name())
+		}
+	}
+
+	return fileNames
 }
