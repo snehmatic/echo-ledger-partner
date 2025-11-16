@@ -15,6 +15,17 @@ var (
 		Start: "01-01-2025",
 		End:   "31-12-2025",
 	}
+
+	CategoryWiseFilterMap = map[string]Filter{
+		"Income Total":        {Income: true, DateRange: &dateRange, Year: year},
+		"Expense Total":       {Expense: true, DateRange: &dateRange, Year: year},
+		"Delhi (Self Travel)": {Expense: true, DateRange: &dateRange, Year: year, Tags: []string{"Delhi"}},
+		"Self (Shopping)":     {Expense: true, DateRange: &dateRange, Year: year, Category: "SHOPPING", Tags: []string{"Self"}},
+		"Family (Travel)":     {Expense: true, DateRange: &dateRange, Year: year, Category: "TRAVEL", Tags: []string{"Family"}},
+		"Family (Shopping)":   {Expense: true, DateRange: &dateRange, Year: year, Category: "SHOPPING", Tags: []string{"Family"}},
+	}
+
+	PresentationMap = make(map[string]float64)
 )
 
 func main() {
@@ -46,61 +57,23 @@ func ReadCsv() []*Record {
 }
 
 func filter(records []*Record) {
-	// Category from tracker
-	var expenseTotal float64
-	var incomeTotal float64
-	var selfShopping float64
-	var familyShopping float64
-	var selfTravel float64
-	var familyTravel float64
 
 	for _, record := range records {
 
-		expense, err := record.CalculateAmmountByFilter(Filter{Expense: true, DateRange: &dateRange, Year: year})
-		if err != nil {
-			panic(err)
-		}
-		val2, err := record.CalculateAmmountByFilter(Filter{Expense: true, DateRange: &dateRange, Year: year, Category: "SHOPPING", Tags: []string{"Self"}})
-		if err != nil {
-			panic(err)
-		}
-		val3, err := record.CalculateAmmountByFilter(Filter{Expense: true, DateRange: &dateRange, Year: year, Category: "SHOPPING", Tags: []string{"Family"}})
-		if err != nil {
-			panic(err)
-		}
-		val4, err := record.CalculateAmmountByFilter(Filter{Expense: true, DateRange: &dateRange, Year: year, Category: "TRAVEL", Tags: []string{"Delhi"}})
-		if err != nil {
-			panic(err)
-		}
-		val5, err := record.CalculateAmmountByFilter(Filter{Expense: true, DateRange: &dateRange, Year: year, Category: "TRAVEL", Tags: []string{"Family"}})
-		if err != nil {
-			panic(err)
-		}
+		for catName, catFilter := range CategoryWiseFilterMap {
+			val, err := record.CalculateAmmountByFilter(catFilter)
+			if err != nil {
+				panic(err)
+			}
 
-		income, err := record.CalculateAmmountByFilter(Filter{Income: true, DateRange: &dateRange, Year: year})
-		if err != nil {
-			panic(err)
+			PresentationMap[catName] += val
 		}
-
-		expenseTotal += expense
-		incomeTotal += income
-		selfShopping += val2
-		familyShopping += val3
-		selfTravel += val4
-		familyTravel += val5
 	}
 
 	// presentation
 	p := message.NewPrinter(language.Hindi)
-	p.Printf("Total Income: %.2f\n", incomeTotal)
-	p.Printf("Total Expense: %.2f\n", expenseTotal)
-	p.Printf("Difference: %.2f\n", incomeTotal-expenseTotal)
 
-	fmt.Println("Self:")
-	p.Printf("\tShopping: %.2f\n", selfShopping)
-	p.Printf("\tTravel: %.2f\n", selfTravel)
-
-	fmt.Println("Family:")
-	p.Printf("\tShopping: %.2f\n", familyShopping)
-	p.Printf("\tTravel: %.2f\n", familyTravel)
+	for k := range CategoryWiseFilterMap {
+		p.Printf("%s:  %.2f\n", k, PresentationMap[k])
+	}
 }
