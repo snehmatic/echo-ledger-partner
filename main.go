@@ -25,27 +25,28 @@ func ReadCsv() []*Record {
 	}
 	defer csvFile.Close()
 
-	var articles []*Record
-	if unmarshalError := gocsv.UnmarshalFile(csvFile, &articles); unmarshalError != nil {
+	var records []*Record
+	if unmarshalError := gocsv.UnmarshalFile(csvFile, &records); unmarshalError != nil {
 		panic(unmarshalError)
 	}
 
-	return articles
+	return records
 }
 
 func filter(records []*Record) {
 	// Category from tracker
-	var expAmount float64
-	var SpendzSelfShopping float64
-	var SpendzFamilyShopping float64
-	var SpendzSelfTravel float64
-	var SpendzFamilyTravel float64
+	var expenseTotal float64
+	var incomeTotal float64
+	var selfShopping float64
+	var familyShopping float64
+	var selfTravel float64
+	var familyTravel float64
 
 	year := "2025"
 
 	for _, record := range records {
 
-		val1, err := record.CalculateAmmountByFilter(Filter{Expense: true, Year: year})
+		expense, err := record.CalculateAmmountByFilter(Filter{Expense: true, Year: year})
 		if err != nil {
 			panic(err)
 		}
@@ -66,20 +67,29 @@ func filter(records []*Record) {
 			panic(err)
 		}
 
-		expAmount += val1
-		SpendzSelfShopping += val2
-		SpendzFamilyShopping += val3
-		SpendzSelfTravel += val4
-		SpendzFamilyTravel += val5
+		income, err := record.CalculateAmmountByFilter(Filter{Income: true, Year: year})
+		if err != nil {
+			panic(err)
+		}
+
+		expenseTotal += expense
+		incomeTotal += income
+		selfShopping += val2
+		familyShopping += val3
+		selfTravel += val4
+		familyTravel += val5
 	}
+
 	// presentation
-	fmt.Println("Total expense:", expAmount)
+	fmt.Printf("Total Income: %.2f\n", incomeTotal)
+	fmt.Printf("Total Expense: %.2f\n", expenseTotal)
+	fmt.Printf("Difference: %.2f\n", incomeTotal-expenseTotal)
 
 	fmt.Println("Self:")
-	fmt.Println("\tShopping:", SpendzSelfShopping)
-	fmt.Println("\tTravel:", SpendzSelfTravel)
+	fmt.Printf("\tShopping: %.2f\n", selfShopping)
+	fmt.Printf("\tTravel: %.2f\n", selfTravel)
 
 	fmt.Println("Family:")
-	fmt.Println("\tShopping:", SpendzFamilyShopping)
-	fmt.Println("\tTravel:", SpendzFamilyTravel)
+	fmt.Printf("\tShopping: %.2f\n", familyShopping)
+	fmt.Printf("\tTravel: %.2f\n", familyTravel)
 }

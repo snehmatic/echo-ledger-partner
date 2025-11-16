@@ -7,17 +7,17 @@ import (
 )
 
 type Record struct {
-	Date     string `csv:"DATE"`
-	Time     string `csv:"TIME"`
-	Place    string `csv:"PLACE"`
-	Amount   string `csv:"AMOUNT"`
-	Kind     string `csv:"DR/CR"`
-	Account  string `csv:"ACCOUNT"`
-	Expense  string `csv:"EXPENSE"`
-	Income   string `csv:"INCOME"`
-	Category string `csv:"CATEGORY"`
-	Tags     string `csv:"TAGS"`
-	Note     string `csv:"NOTE"`
+	DateStr   string `csv:"DATE"`
+	TimeStr   string `csv:"TIME"`
+	Place     string `csv:"PLACE"`
+	AmountStr string `csv:"AMOUNT"`
+	Kind      string `csv:"DR/CR"`
+	Account   string `csv:"ACCOUNT"`
+	Expense   string `csv:"EXPENSE"`
+	Income    string `csv:"INCOME"`
+	Category  string `csv:"CATEGORY"`
+	Tags      string `csv:"TAGS"`
+	Note      string `csv:"NOTE"`
 }
 
 type Filter struct {
@@ -28,14 +28,23 @@ type Filter struct {
 	Tags     []string // tag substrings that need to be in record
 }
 
-func (r Record) CalculateAmmountByFilter(filter Filter) (float64, error) {
-
+func (r Record) Amount() (float64, error) {
 	// convert amount string to float64 (ex. 1,000 -> 1000.00)
-	cleanedStr := strings.ReplaceAll(r.Amount, ",", "")
+	cleanedStr := strings.ReplaceAll(r.AmountStr, ",", "")
 	cleanedStr = strings.ReplaceAll(cleanedStr, "'", "")
 	amount, err := strconv.ParseFloat(cleanedStr, 64)
 	if err != nil {
 		return 0.00, fmt.Errorf("Error converting string to float: %v\n", err)
+	}
+
+	return amount, nil
+}
+
+func (r Record) CalculateAmmountByFilter(filter Filter) (float64, error) {
+
+	amount, err := r.Amount()
+	if err != nil {
+		return 0.00, err
 	}
 
 	if filter.Expense {
@@ -49,7 +58,7 @@ func (r Record) CalculateAmmountByFilter(filter Filter) (float64, error) {
 	}
 
 	if filter.Year != "" {
-		if !strings.Contains(r.Date, filter.Year) {
+		if !strings.Contains(r.DateStr, filter.Year) {
 			return 0, nil
 		}
 	}
