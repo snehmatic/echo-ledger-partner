@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
+)
+
+var (
+	layout = "02-01-2006" // Corresponds to DD-MM-YYYY
 )
 
 type Record struct {
@@ -21,11 +26,34 @@ type Record struct {
 }
 
 type Filter struct {
-	Expense  bool   // is expense
-	Income   bool   // is income
-	Category string // category substring
-	Year     string
-	Tags     []string // tag substrings that need to be in record
+	Expense   bool   // is expense
+	Income    bool   // is income
+	Category  string // category substring
+	Year      string
+	DateRange *DateRange
+	Tags      []string // tag substrings that need to be in record
+}
+
+type DateRange struct {
+	Start string // ex. 30-01-2000
+	End   string // ex. 30-12-2025
+}
+
+func (dr DateRange) ParsedDateRange() (time.Time, time.Time) {
+	start, _ := time.Parse(layout, dr.Start)
+	end, _ := time.Parse(layout, dr.End)
+	return start, end
+}
+
+func (r Record) IsInDateRange(dr DateRange) bool {
+	rDate, _ := r.ParsedDate()
+	start, end := dr.ParsedDateRange()
+
+	if start.After(end) {
+		start, end = end, start
+	}
+
+	return (rDate.Equal(start) || rDate.After(start)) && (rDate.Equal(end) || rDate.Before(end))
 }
 
 func (r Record) Amount() (float64, error) {
@@ -38,6 +66,10 @@ func (r Record) Amount() (float64, error) {
 	}
 
 	return amount, nil
+}
+
+func (r Record) ParsedDate() (time.Time, error) {
+	return time.Parse("2006-01-02", r.DateStr)
 }
 
 func (r Record) CalculateAmmountByFilter(filter Filter) (float64, error) {
@@ -59,6 +91,12 @@ func (r Record) CalculateAmmountByFilter(filter Filter) (float64, error) {
 
 	if filter.Year != "" {
 		if !strings.Contains(r.DateStr, filter.Year) {
+			return 0, nil
+		}
+	}
+
+	if filter.DateRange != nil {
+		if !r.IsInDateRange(*filter.DateRange) {
 			return 0, nil
 		}
 	}
